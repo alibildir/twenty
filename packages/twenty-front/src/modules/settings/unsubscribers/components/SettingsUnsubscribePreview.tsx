@@ -54,18 +54,26 @@ const StyledTopicRow = styled.div`
 
 export const SettingsUnsubscribePreview = () => {
   const { t } = useLingui();
+<<<<<<< HEAD
   const { unsubscribeTopics, loading } = useUnsubscribeTopics();
+=======
+  const { unsubscribeTopics } = useUnsubscribeTopics();
+>>>>>>> f2c35cb2dd (fix(sdk+server): app sync pipeline + auto-adopt UI-added viewField (#23192, #23301))
 
   const publicTopics = unsubscribeTopics.filter(
     (topic) => topic.visibility === UnsubscribeTopicVisibility.PUBLIC,
   );
 
+<<<<<<< HEAD
   const hasPublicTopics = publicTopics.length > 0;
 
+=======
+>>>>>>> f2c35cb2dd (fix(sdk+server): app sync pipeline + auto-adopt UI-added viewField (#23192, #23301))
   return (
     <Section>
       <H2Title
         title={t`Unsubscribe page`}
+<<<<<<< HEAD
         description={
           hasPublicTopics
             ? t`Preview of the page recipients see when they unsubscribe`
@@ -125,6 +133,45 @@ export const SettingsUnsubscribePreview = () => {
             )}
           </StyledCard>
         )}
+=======
+        description={t`Preview of the page recipients see when they unsubscribe`}
+      />
+      <StyledViewport>
+        <StyledCard rounded>
+          <StyledHeader>
+            <H2Title
+              title={t`Do you want to unsubscribe?`}
+              description={t`Confirm your preferences:`}
+            />
+          </StyledHeader>
+          <StyledTopics>
+            {publicTopics.map((topic) => (
+              <StyledTopicRow key={topic.id}>
+                <Checkbox
+                  checked
+                  onChange={() => {}}
+                  aria-label={topic.name ?? t`Untitled topic`}
+                />
+                {topic.name ?? t`Untitled topic`}
+              </StyledTopicRow>
+            ))}
+          </StyledTopics>
+          <Button
+            title={t`Update`}
+            variant="primary"
+            accent="blue"
+            fullWidth
+            justify="center"
+          />
+          <HorizontalSeparator text={t`Or`} noMargin />
+          <Button
+            title={t`Unsubscribe all`}
+            variant="secondary"
+            fullWidth
+            justify="center"
+          />
+        </StyledCard>
+>>>>>>> f2c35cb2dd (fix(sdk+server): app sync pipeline + auto-adopt UI-added viewField (#23192, #23301))
       </StyledViewport>
     </Section>
   );

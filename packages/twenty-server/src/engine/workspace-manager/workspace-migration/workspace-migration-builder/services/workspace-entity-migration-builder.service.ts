@@ -31,7 +31,10 @@ import { flatEntityDeletedCreatedUpdatedMatrixDispatcher } from 'src/engine/work
 import { getMetadataEmptyWorkspaceMigrationActionRecord } from 'src/engine/workspace-manager/workspace-migration/utils/get-metadata-empty-workspace-migration-action-record.util';
 import { shouldInferDeletionFromMissingEntities } from 'src/engine/workspace-manager/workspace-migration/utils/should-infer-deletion-from-missing-entities.util';
 import { topologicallySortUniversalFlatEntitiesForSelfReferentialFks } from 'src/engine/workspace-manager/workspace-migration/utils/topologically-sort-universal-flat-entities-for-self-referential-fks.util';
-import { FlatEntityValidationError } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/types/failed-flat-entity-validation.type';
+import {
+  FlatEntityValidationError,
+  ExistingEntityConflictContext,
+} from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/types/failed-flat-entity-validation.type';
 import { FailedFlatEntityValidateAndBuild } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/failed-flat-entity-validate-and-build.type';
 import { SuccessfulFlatEntityValidateAndBuild } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/successful-flat-entity-validate-and-build.type';
 import { FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-update-validation-args.type';
@@ -417,22 +420,32 @@ export abstract class WorkspaceEntityMigrationBuilderService<
       MetadataFlatEntity<typeof this.metadataName>
     >;
     universalIdentifier: string;
-  }): FlatEntityValidationError[] {
+  }): {
+    errors: FlatEntityValidationError[];
+    existingEntityConflictContext?: ExistingEntityConflictContext | null;
+  } {
     const existingEntity = findFlatEntityByUniversalIdentifier({
       flatEntityMaps: universalFlatEntityMaps,
       universalIdentifier,
     });
 
     if (isDefined(existingEntity)) {
-      return [
-        {
-          code: FlatEntityMapsExceptionCode.ENTITY_ALREADY_EXISTS,
-          message: `Cannot create ${this.metadataName}: universalIdentifier "${universalIdentifier}" already exists in ${this.metadataName} maps from application "${existingEntity.applicationUniversalIdentifier}"`,
+      return {
+        errors: [
+          {
+            code: FlatEntityMapsExceptionCode.ENTITY_ALREADY_EXISTS,
+            message: `Cannot create ${this.metadataName}: universalIdentifier "${universalIdentifier}" already exists in ${this.metadataName} maps from application "${existingEntity.applicationUniversalIdentifier}"`,
+          },
+        ],
+        existingEntityConflictContext: {
+          existingEntityId: existingEntity.id,
+          existingApplicationUniversalIdentifier:
+            existingEntity.applicationUniversalIdentifier,
         },
-      ];
+      };
     }
 
-    return [];
+    return { errors: [] };
   }
 
   private async innerValidateFlatEntityCreation(
@@ -448,9 +461,13 @@ export abstract class WorkspaceEntityMigrationBuilderService<
           ],
       });
 
+    // Both centralized checks (UUID well-formedness and per-type existence)
+    // must be considered together — otherwise a malformed UUID would silently
+    // pass creation when no entity-collision exists. See review feedback on
+    // PR #23327.
     const centralizedErrors = [
       ...uuidValidationResult,
-      ...perTypeExistenceResult,
+      ...perTypeExistenceResult.errors,
     ];
 
     const result = await this.validateFlatEntityCreation(args);
@@ -458,7 +475,11 @@ export abstract class WorkspaceEntityMigrationBuilderService<
     if (result.status === 'fail') {
       return {
         ...result,
-        errors: [...result.errors, ...centralizedErrors],
+        errors: [...result.errors, ...uuidValidationResult],
+        existingEntityConflictContext:
+          perTypeExistenceResult.existingEntityConflictContext ??
+          result.existingEntityConflictContext ??
+          null,
       };
     }
 
@@ -468,9 +489,11 @@ export abstract class WorkspaceEntityMigrationBuilderService<
         flatEntityMinimalInformation: {
           universalIdentifier: args.flatEntityToValidate.universalIdentifier,
         } as Partial<MetadataFlatEntity<T>>,
-        errors: centralizedErrors,
+        errors: [...uuidValidationResult, ...perTypeExistenceResult.errors],
         metadataName: this.metadataName,
         type: 'create',
+        existingEntityConflictContext:
+          perTypeExistenceResult.existingEntityConflictContext ?? null,
       };
     }
 

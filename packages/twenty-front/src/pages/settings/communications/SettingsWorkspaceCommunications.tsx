@@ -43,6 +43,7 @@ export const SettingsWorkspaceCommunications = () => {
     FeatureFlagKey.IS_EMAIL_GROUP_ENABLED,
   );
 
+<<<<<<< HEAD
   const tabs = [
     { id: 'emails', title: t`Emails`, Icon: IconMail },
     {
@@ -61,6 +62,8 @@ export const SettingsWorkspaceCommunications = () => {
     },
   ];
 
+=======
+>>>>>>> f2c35cb2dd (fix(sdk+server): app sync pipeline + auto-adopt UI-added viewField (#23192, #23301))
   if (!isEmailGroupFeatureEnabled) {
     return null;
   }

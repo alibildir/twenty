@@ -39,6 +39,7 @@ exports[`updateOne FieldMetadataService morph relation fields v2 - Add one targe
             },
           ],
           "flatEntityMinimalInformation": {
+            "existingEntityConflictContext": null,
             "name": "toto",
             "objectMetadataUniversalIdentifier": Any<String>,
             "universalIdentifier": Any<String>,
@@ -137,6 +138,7 @@ exports[`updateOne FieldMetadataService morph relation fields v2 - Add one targe
             },
           ],
           "flatEntityMinimalInformation": {
+            "existingEntityConflictContext": null,
             "name": "fieldNameCompanyForMorphRelationSecond",
             "objectMetadataUniversalIdentifier": Any<String>,
             "universalIdentifier": Any<String>,
@@ -154,6 +156,7 @@ exports[`updateOne FieldMetadataService morph relation fields v2 - Add one targe
             },
           ],
           "flatEntityMinimalInformation": {
+            "existingEntityConflictContext": null,
             "name": "toto",
             "objectMetadataUniversalIdentifier": Any<String>,
             "universalIdentifier": Any<String>,
@@ -173,6 +176,7 @@ exports[`updateOne FieldMetadataService morph relation fields v2 - Add one targe
             },
           ],
           "flatEntityMinimalInformation": {
+            "existingEntityConflictContext": null,
             "name": "IDX_59563a0476bb3b8760e33ae6d5b",
             "universalIdentifier": Any<String>,
           },
