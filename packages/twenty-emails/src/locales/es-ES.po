@@ -19,11 +19,6 @@ msgstr ""
 "X-Crowdin-File-ID: 27\n"
 
 #. js-lingui-explicit-id
-#: src/emails/test.email.tsx
-msgid "Test email"
-msgstr "Correo de prueba"
-
-#. js-lingui-explicit-id
 #: src/emails/validate-approved-access-domain.email.tsx
 #: src/emails/validate-approved-access-domain.email.tsx
 msgid "Validate domain"
@@ -72,6 +67,11 @@ msgstr "Si deseas seguir usando Twenty, actualiza tu suscripción en los próxim
 #: src/emails/warn-suspended-workspace.email.tsx
 msgid "Update your subscription"
 msgstr "Actualiza tu suscripción"
+
+#. js-lingui-explicit-id
+#: src/emails/test.email.tsx
+msgid "Test email"
+msgstr "Correo de prueba"
 
 #. js-lingui-explicit-id
 #: src/emails/server-admin-access-changed.email.tsx
