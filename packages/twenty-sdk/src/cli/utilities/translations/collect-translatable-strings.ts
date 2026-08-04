@@ -57,6 +57,20 @@ export const collectTranslatableStrings = (manifest: Manifest): string[] => {
                 (nestedField as Record<string, unknown>)[nestedFieldKey],
               );
             }
+
+            const nestedFieldOptions = (
+              nestedField as Record<string, unknown>
+            )['options'];
+
+            if (Array.isArray(nestedFieldOptions)) {
+              for (const option of nestedFieldOptions) {
+                if (option === null || typeof option !== 'object') {
+                  continue;
+                }
+
+                addString((option as Record<string, unknown>)['label']);
+              }
+            }
           }
         }
 
@@ -70,6 +84,23 @@ export const collectTranslatableStrings = (manifest: Manifest): string[] => {
             for (const indexKey of ['name', 'description']) {
               addString((index as Record<string, unknown>)[indexKey]);
             }
+          }
+        }
+      }
+
+      // Top-level fields (extensions to standard objects) declare option labels
+      // here too. Without this, SELECT/MULTI_SELECT labels added via
+      // `defineField` never reach the translation catalog.
+      if (manifestKey === 'fields') {
+        const fieldOptions = (entity as Record<string, unknown>)['options'];
+
+        if (Array.isArray(fieldOptions)) {
+          for (const option of fieldOptions) {
+            if (option === null || typeof option !== 'object') {
+              continue;
+            }
+
+            addString((option as Record<string, unknown>)['label']);
           }
         }
       }
