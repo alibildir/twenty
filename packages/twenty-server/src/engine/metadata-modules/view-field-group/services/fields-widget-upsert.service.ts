@@ -5,6 +5,7 @@ import {
   isDefined,
   isFieldMetadataEligibleForFieldsWidget,
 } from 'twenty-shared/utils';
+import { ViewKey, ViewOpenRecordIn, ViewType, ViewVisibility } from 'twenty-shared/types';
 import { IsNull } from 'typeorm';
 import { v4 } from 'uuid';
 
@@ -17,6 +18,7 @@ import { resolveEntityRelationUniversalIdentifiers } from 'src/engine/metadata-m
 import { splitEntitiesByRemovalStrategy } from 'src/engine/metadata-modules/flat-entity/utils/split-entities-by-removal-strategy.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
+import { PageLayoutWidgetEntity } from 'src/engine/metadata-modules/page-layout-widget/entities/page-layout-widget.entity';
 import { isFlatPageLayoutWidgetConfigurationOfType } from 'src/engine/metadata-modules/flat-page-layout-widget/utils/is-flat-page-layout-widget-configuration-of-type.util';
 import { type FlatViewFieldGroupMaps } from 'src/engine/metadata-modules/flat-view-field-group/types/flat-view-field-group-maps.type';
 import { type FlatViewFieldGroup } from 'src/engine/metadata-modules/flat-view-field-group/types/flat-view-field-group.type';
@@ -48,6 +50,8 @@ export class FieldsWidgetUpsertService {
     private readonly applicationService: ApplicationService,
     @InjectWorkspaceScopedRepository(ViewEntity)
     private readonly viewRepository: WorkspaceScopedRepository<ViewEntity>,
+    @InjectWorkspaceScopedRepository(PageLayoutWidgetEntity)
+    private readonly pageLayoutWidgetRepository: WorkspaceScopedRepository<PageLayoutWidgetEntity>,
   ) {}
 
   async upsertFieldsWidget({
@@ -114,13 +118,66 @@ export class FieldsWidgetUpsertService {
       );
     }
 
-    const viewId = widget.configuration.viewId;
+    let viewId = widget.configuration.viewId;
 
     if (!isDefined(viewId)) {
-      throw new ViewFieldGroupException(
-        t`Fields widget has no associated view`,
-        ViewFieldGroupExceptionCode.VIEW_NOT_FOUND,
-      );
+      // Vextragy/custom-object workaround: when the FIELDS widget has no
+      // associated view (e.g., the upstream FIELDS_WIDGET auto-create did
+      // not run for newly added objects), find or create a FIELDS_WIDGET
+      // view for this widget's object and link it.
+      const objectMetadataId = widget.objectMetadataId;
+
+      const existingView = Object.values(flatViewMaps.byUniversalIdentifier)
+        .filter(isDefined)
+        .find(
+          (v) =>
+            v.objectMetadataId === objectMetadataId &&
+            v.type === ViewType.FIELDS_WIDGET &&
+            v.isActive,
+        );
+
+      if (isDefined(existingView)) {
+        viewId = existingView.id;
+      } else {
+        const { workspaceCustomFlatApplication } =
+          await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+            { workspaceId },
+          );
+        const newViewId = v4();
+        const newUniversalIdentifier = v4();
+        const now = new Date().toISOString();
+        const newView = this.viewRepository.create({
+          id: newViewId,
+          universalIdentifier: newUniversalIdentifier,
+          name: `${Object.values(flatObjectMetadataMaps.byId).find((o) => o?.id === objectMetadataId)?.nameSingular ?? ''} Record Page Fields`,
+          type: ViewType.FIELDS_WIDGET,
+          key: null,
+          objectMetadataId,
+          workspaceId,
+          applicationId: workspaceCustomFlatApplication.id,
+          isActive: true,
+          position: 0,
+          createdAt: now,
+          updatedAt: now,
+          icon: 'IconListNumbers',
+          openRecordIn: ViewOpenRecordIn.SIDE_PANEL,
+          visibility: ViewVisibility.WORKSPACE,
+          shouldHideEmptyGroups: false,
+          isCompact: false,
+          isCustom: false,
+          isSystemSideEffect: false,
+        });
+        const saved = await this.viewRepository.save(newView);
+        viewId = saved.id;
+      }
+
+      // Persist viewId on the widget configuration
+      await this.pageLayoutWidgetRepository.update(widgetId, {
+        configuration: {
+          ...widget.configuration,
+          viewId,
+        },
+      });
     }
 
     const flatView = findFlatEntityByIdInFlatEntityMaps({
